@@ -44,6 +44,12 @@ Sets mini-split modes and temperatures based on:
   declared work windows (default 72 °F).
 - `schedule.office_work` — weekly schedule of office "work mode" windows.
   Default Mon–Fri 08:30–17:00, weekends empty. Editable from the dashboard.
+- `input_number.setpoint_cool_game_room` — setpoint for the game room
+  while `schedule.game_room_cool` is active and someone is home
+  (default 72 °F).
+- `schedule.game_room_cool` — weekly schedule of game-room "active
+  cooling" windows. Default Sat/Sun 08:00–23:30, M–F 16:00–23:30.
+  Editable from the dashboard.
 - Time of day (awake vs asleep windows)
 
 Every entry point that runs Apply Mode goes through one of the "re-apply"
@@ -67,6 +73,7 @@ and makes every code path that runs it explicit and traceable.
 | `hvac_schedule_asleep_cool`                                  | 23:30, only if season=Cool                             |
 | `hvac_mbr_pre_cool`                                          | 22:00, only if season=Cool and anyone home             |
 | `hvac_office_work_schedule_re_apply_mode`                    | `schedule.office_work` changes (start/end of work window) |
+| `hvac_apply_mode_re_apply_on_game_room_schedule`            | `schedule.game_room_cool` changes (start/end of cool window) |
 | `hvac_ac_overrides_auto_off_on_heat_season`                 | season flips to Heat (also turns off overrides first)  |
 | Dashboard "Apply Settings Now" button                        | User tap                                               |
 
@@ -160,6 +167,32 @@ The MBR asleep setpoint (`setpoint_cool_sleep_mbr`) and the office asleep
 setpoint (`setpoint_cool_sleep`) are **not affected** by either the
 override or the work schedule — overnight stays as configured regardless.
 
+### How Apply Mode handles the game room schedule (Cool season)
+
+The game room sits alongside dining and kitchen in the main-floor group
+but has its own schedule override (`schedule.game_room_cool`). When the
+schedule is on and someone is home, the game room drops to
+`setpoint_cool_game_room` (default 72 °F). When the schedule is off (or
+no one is home), the game room follows the normal awake/asleep/away
+setpoints.
+
+In each Cool-season setpoint write:
+
+- **Away branch (any_home=off):** dining + kitchen at `cool_away`;
+  game room **always** at `cool_away` — the schedule is ignored when
+  nobody is home. (Away trumps the schedule.)
+- **Awake branch:** dining + kitchen at `cool_awake`; game room at
+  `setpoint_cool_game_room` if `schedule.game_room_cool` is on, else
+  `cool_awake`.
+- **Asleep default:** dining + kitchen at `cool_sleep`; game room at
+  `setpoint_cool_game_room` if `schedule.game_room_cool` is on, else
+  `cool_sleep`. (The schedule extends into the start of the asleep
+  window, e.g. M–F 16:00–23:30, so the 22:00–23:30 overlap honors the
+  schedule setpoint rather than falling back to sleep.)
+
+The MBR and office override logic (`master_bedroom_ac` / `office_ac`)
+is unchanged.
+
 ### Setpoint reference (Cool season, current values)
 
 The values below are the as-of 2026-07-14 defaults. Editable from
@@ -175,6 +208,7 @@ the dashboard; this table is a snapshot for traceability.
 | `setpoint_cool_office_work`     | Office during awake + `schedule.office_work` on   | 72 °F |
 | `setpoint_cool_mbr_override`    | MBR while `master_bedroom_ac` is on                | 68 °F |
 | `setpoint_cool_office_override` | Office while `office_ac` is on                     | 72 °F |
+| `setpoint_cool_game_room`       | Game Room while `schedule.game_room_cool` is on    | 72 °F |
 
 The two `_override` setpoints always win when the corresponding boolean
 is on, regardless of season (Cool or Off) or time of day (awake or asleep).
@@ -372,6 +406,16 @@ and flag the gap instead.
 
 ## History
 
+- **2026-07-15 (part 3)** — Added `schedule.game_room_cool` and
+  `setpoint_cool_game_room`. `hvac_apply_mode` Cool-season setpoint
+  writes split the game room out of the main-floor group so the schedule
+  can drop it to `setpoint_cool_game_room` (default 72) when on.
+  Away branch ignores the schedule (away trumps). New re-apply automation
+  `hvac_apply_mode_re_apply_on_game_room_schedule` fires Apply Mode when
+  the schedule flips. Dashboard: schedule tile added to Overview →
+  Schedules; setpoint tile added to Setpoints → Cool — Upstairs Default &
+  Office Work; re-apply tile added to a new Schedule Re-apply section
+  on the Automations tab.
 - **2026-07-15 (part 2)** — Restructured Apply Mode to be a pure "commit"
   body with no triggers of its own. Removed the 3 self-triggers (season,
   oil heat, presence) from `hvac_apply_mode` and replaced each with a
