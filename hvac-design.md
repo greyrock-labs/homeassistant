@@ -25,7 +25,8 @@ those setpoint writes thinking they're stale.
 
 ### The engine: `automation.hvac_apply_mode`
 
-The core logic. Sets mini-split modes and temperatures based on:
+The core logic, designed as a "commit" body with **no triggers of its own**.
+Sets mini-split modes and temperatures based on:
 
 - `input_select.hvac_season` — Heat / Cool / Off
 - `input_boolean.any_home` — anyone home (derived from person entities)
@@ -45,8 +46,29 @@ The core logic. Sets mini-split modes and temperatures based on:
   Default Mon–Fri 08:30–17:00, weekends empty. Editable from the dashboard.
 - Time of day (awake vs asleep windows)
 
-Triggers on changes to season, oil heat, or presence. Also called directly by
-the schedule automations (`automation.trigger` with `skip_condition: true`).
+Every entry point that runs Apply Mode goes through one of the "re-apply"
+automations listed below — there is no path that fires Apply Mode
+directly through its own triggers.
+
+### Apply Mode entry points
+
+Apply Mode has 10 entry points, all of which call
+`automation.trigger` on `automation.hvac_apply_mode` with
+`skip_condition: true`. This keeps the engine as a pure "commit" body
+and makes every code path that runs it explicit and traceable.
+
+| Entry point                                                  | Triggers when                                          |
+|--------------------------------------------------------------|--------------------------------------------------------|
+| `hvac_apply_mode_re_apply_on_season_change`                 | `input_select.hvac_season` changes                      |
+| `hvac_apply_mode_re_apply_on_oil_heat_change`                | `input_boolean.use_oil_heat` changes                   |
+| `hvac_apply_mode_re_apply_on_presence_change`                | `input_boolean.any_home` changes                       |
+| `hvac_schedule_awake`                                        | 07:00 weekday / 07:30 weekend                          |
+| `hvac_schedule_asleep_heat`                                  | 23:00, only if season=Heat                             |
+| `hvac_schedule_asleep_cool`                                  | 23:30, only if season=Cool                             |
+| `hvac_mbr_pre_cool`                                          | 22:00, only if season=Cool and anyone home             |
+| `hvac_office_work_schedule_re_apply_mode`                    | `schedule.office_work` changes (start/end of work window) |
+| `hvac_ac_overrides_auto_off_on_heat_season`                 | season flips to Heat (also turns off overrides first)  |
+| Dashboard "Apply Settings Now" button                        | User tap                                               |
 
 ### Schedule triggers
 
@@ -314,6 +336,12 @@ When editing any of these automations, ask:
       cannot coexist with AC; the `hvac_ac_overrides_auto_off_on_heat_season`
       automation must still fire on any season transition that conflicts
       with active overrides.
+- [ ] Did you add a re-apply automation for any new state that Apply Mode
+      should react to? Apply Mode has no triggers of its own; the only
+      way to run it is via `automation.trigger` from a re-apply automation
+      or the dashboard button. If something needs to "kick" Apply Mode
+      when a new helper or boolean changes, add a re-apply automation to
+      the "Apply Mode entry points" table in this doc.
 - [ ] Are my state values capitalized? (`Heat`, `Cool`, `Off`)
 - [ ] Did I leave the 5 `set_temperature` writes to
       `climate.dining_room_dining_room_thermostat` alone? Those still belong
@@ -344,6 +372,16 @@ and flag the gap instead.
 
 ## History
 
+- **2026-07-15 (part 2)** — Restructured Apply Mode to be a pure "commit"
+  body with no triggers of its own. Removed the 3 self-triggers (season,
+  oil heat, presence) from `hvac_apply_mode` and replaced each with a
+  dedicated re-apply automation (`hvac_apply_mode_re_apply_on_season_change`,
+  `_on_oil_heat_change`, `_on_presence_change`). Updated
+  `hvac_ac_overrides_auto_off_on_heat_season` to also re-apply Apply
+  Mode (now required because the season trigger no longer does it). All
+  10 entry points now follow the same pattern: `automation.trigger`
+  with `skip_condition: true`. This makes every code path that runs
+  Apply Mode explicit and traceable.
 - **2026-07-15** — Added `hvac_office_work_schedule_re_apply_mode`: when
   `schedule.office_work` flips on/off, re-run `hvac_apply_mode` with
   `skip_condition: true`. Closes the gap where the office setpoint
