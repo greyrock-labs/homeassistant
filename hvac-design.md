@@ -74,6 +74,11 @@ the room returns to following Apply Mode's schedule.
 - `hvac_office_ac_auto_off_at_7pm` — daily 19:00 reset of `office_ac`
   (skips if already off). Cascades into `hvac_office_ac_off` for the
   season-aware setpoint restore.
+- `hvac_office_work_schedule_re_apply_mode` — when `schedule.office_work`
+  changes state (start or end of a work window), re-runs `hvac_apply_mode`
+  with `skip_condition: true`. Without this, the office setpoint would
+  not update at 08:30 / 17:00 until something else triggered Apply Mode.
+  Mirrors the existing awake/asleep time-trigger pattern.
 
 ### Master Bedroom AC override
 
@@ -339,6 +344,13 @@ and flag the gap instead.
 
 ## History
 
+- **2026-07-15** — Added `hvac_office_work_schedule_re_apply_mode`: when
+  `schedule.office_work` flips on/off, re-run `hvac_apply_mode` with
+  `skip_condition: true`. Closes the gap where the office setpoint
+  wouldn't update at the 08:30 / 17:00 schedule boundary until something
+  else triggered Apply Mode. Mirrors the awake/asleep time-trigger
+  pattern. Dashboard tile added to the Office AC section of the
+  Automations tab.
 - **2026-07-14 (part 6)** — Aligned `setpoint_cool_sleep` from 78 to 80 °F
   to match the rest of the upstairs energy-saving setpoints. Added a
   setpoint reference table to this doc.
