@@ -1,0 +1,814 @@
+{
+  "id": "1781273411047",
+  "alias": "HVAC - Apply Mode",
+  "description": "Core HVAC logic engine (\"commit\" body — no triggers of its own). Sets all mini-split modes and temperatures based on presence (any_home), time of day (awake/asleep schedule), thermostat season (heat/cool/off), and oil heat state. Apply Mode is invoked by 11 entry points (see hvac-design.md \"Apply Mode entry points\" section): re-apply automations for season, oil heat, presence, schedule boundaries (awake/asleep/cool-pre), office work schedule, game room schedule, heat-season override auto-off; plus the dashboard \"Apply Settings Now\" button. All entry points call automation.trigger with skip_condition: true.",
+  "triggers": [],
+  "actions": [
+    {
+      "choose": [
+        {
+          "conditions": [
+            {
+              "condition": "state",
+              "entity_id": "input_boolean.any_home",
+              "state": "off"
+            }
+          ],
+          "sequence": [
+            {
+              "choose": [
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": "Heat"
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "state",
+                              "entity_id": "input_boolean.use_oil_heat",
+                              "state": "on"
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                  "climate.hvac_office_hvac_office"
+                                ]
+                              }
+                            },
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_heat_away') | float }}"},
+                              "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_hvac_mode",
+                          "data": {"hvac_mode": "off"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_master_bedroom_hvac_master_bedroom",
+                              "climate.hvac_office_hvac_office"
+                            ]
+                          }
+                        },
+                        {
+                          "action": "climate.set_hvac_mode",
+                          "data": {"hvac_mode": "heat"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_dining_room_hvac_dining_room",
+                              "climate.hvac_game_room_hvac_game_room",
+                              "climate.hvac_kitchen_hvac_kitchen"
+                            ]
+                          }
+                        },
+                        {
+                          "action": "climate.set_temperature",
+                          "data": {"temperature": "{{ states('input_number.setpoint_heat_away') | float }}"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_dining_room_hvac_dining_room",
+                              "climate.hvac_game_room_hvac_game_room",
+                              "climate.hvac_kitchen_hvac_kitchen"
+                            ]
+                          }
+                        },
+                        {
+                          "action": "climate.set_temperature",
+                          "data": {"temperature": "{{ states('input_number.setpoint_heat_temp_low_oil') | float }}"},
+                          "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": "Cool"
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "action": "climate.set_hvac_mode",
+                      "data": {"hvac_mode": "cool"},
+                      "target": {
+                        "entity_id": [
+                          "climate.hvac_dining_room_hvac_dining_room",
+                          "climate.hvac_game_room_hvac_game_room",
+                          "climate.hvac_kitchen_hvac_kitchen",
+                          "climate.hvac_master_bedroom_hvac_master_bedroom",
+                          "climate.hvac_office_hvac_office"
+                        ]
+                      }
+                    },
+                    {
+                      "action": "climate.set_temperature",
+                      "data": {"temperature": "{{ states('input_number.setpoint_cool_away') | float }}"},
+                      "target": {
+                        "entity_id": [
+                          "climate.hvac_dining_room_hvac_dining_room",
+                          "climate.hvac_kitchen_hvac_kitchen"
+                        ]
+                      }
+                    },
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "state",
+                              "entity_id": "input_boolean.master_bedroom_ac",
+                              "state": "on"
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_mbr_override') | float }}"},
+                              "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_temperature",
+                          "data": {"temperature": "{{ states('input_number.setpoint_cool_upstairs_default') | float }}"},
+                          "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                        }
+                      ]
+                    },
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "state",
+                              "entity_id": "input_boolean.office_ac",
+                              "state": "on"
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_office_override') | float }}"},
+                              "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_temperature",
+                          "data": {"temperature": "{{ states('input_number.setpoint_cool_upstairs_default') | float }}"},
+                          "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                        }
+                      ]
+                    },
+                    {
+                      "action": "climate.set_temperature",
+                      "data": {"temperature": "{{ states('input_number.setpoint_cool_away') | float }}"},
+                      "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                    }
+                  ]
+                },
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": "Off"
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "and",
+                              "conditions": [
+                                {"condition": "state", "entity_id": "input_boolean.office_ac", "state": "on"},
+                                {"condition": "state", "entity_id": "input_boolean.master_bedroom_ac", "state": "on"}
+                              ]
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "conditions": [
+                            {"condition": "state", "entity_id": "input_boolean.office_ac", "state": "on"}
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_master_bedroom_hvac_master_bedroom"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "conditions": [
+                            {"condition": "state", "entity_id": "input_boolean.master_bedroom_ac", "state": "on"}
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_office_hvac_office"
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_hvac_mode",
+                          "data": {"hvac_mode": "off"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_dining_room_hvac_dining_room",
+                              "climate.hvac_game_room_hvac_game_room",
+                              "climate.hvac_kitchen_hvac_kitchen",
+                              "climate.hvac_master_bedroom_hvac_master_bedroom",
+                              "climate.hvac_office_hvac_office"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "default": [
+            {
+              "choose": [
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": ["Heat"]
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {"condition": "state", "entity_id": "input_boolean.use_oil_heat", "state": "on"}
+                          ],
+                          "sequence": [
+                            {
+                              "choose": [
+                                {
+                                  "conditions": [
+                                    {
+                                      "condition": "or",
+                                      "conditions": [
+                                        {"after": "07:00:00", "before": "23:00:00", "condition": "time", "weekday": ["mon", "tue", "wed", "thu", "fri"]},
+                                        {"after": "07:30:00", "before": "23:00:00", "condition": "time", "weekday": ["sat", "sun"]}
+                                      ]
+                                    }
+                                  ],
+                                  "sequence": [
+                                    {
+                                      "action": "climate.set_hvac_mode",
+                                      "data": {"hvac_mode": "off"},
+                                      "target": {
+                                        "entity_id": [
+                                          "climate.hvac_dining_room_hvac_dining_room",
+                                          "climate.hvac_game_room_hvac_game_room",
+                                          "climate.hvac_kitchen_hvac_kitchen",
+                                          "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                          "climate.hvac_office_hvac_office"
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "action": "climate.set_temperature",
+                                      "data": {"temperature": "{{ states('input_number.setpoint_heat_awake') | float }}"},
+                                      "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                                    }
+                                  ]
+                                }
+                              ],
+                              "default": [
+                                {
+                                  "action": "climate.set_hvac_mode",
+                                  "data": {"hvac_mode": "off"},
+                                  "target": {
+                                    "entity_id": [
+                                      "climate.hvac_dining_room_hvac_dining_room",
+                                      "climate.hvac_game_room_hvac_game_room",
+                                      "climate.hvac_kitchen_hvac_kitchen",
+                                      "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                      "climate.hvac_office_hvac_office"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_heat_oil_sleep') | float }}"},
+                                  "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "choose": [
+                            {
+                              "conditions": [
+                                {
+                                  "condition": "or",
+                                  "conditions": [
+                                    {"after": "07:00:00", "before": "23:00:00", "condition": "time", "weekday": ["mon", "tue", "wed", "thu", "fri"]},
+                                    {"after": "07:30:00", "before": "23:00:00", "condition": "time", "weekday": ["sat", "sun"]}
+                                  ]
+                                }
+                              ],
+                              "sequence": [
+                                {
+                                  "action": "climate.set_hvac_mode",
+                                  "data": {"hvac_mode": "off"},
+                                  "target": {
+                                    "entity_id": [
+                                      "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                      "climate.hvac_office_hvac_office"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "action": "climate.set_hvac_mode",
+                                  "data": {"hvac_mode": "heat"},
+                                  "target": {
+                                    "entity_id": [
+                                      "climate.hvac_dining_room_hvac_dining_room",
+                                      "climate.hvac_game_room_hvac_game_room",
+                                      "climate.hvac_kitchen_hvac_kitchen"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_heat_awake') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_dining_room_hvac_dining_room"}
+                                },
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_heat_kitchen') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_kitchen_hvac_kitchen"}
+                                },
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_heat_game_room') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                                },
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_heat_temp_low_oil') | float }}"},
+                                  "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                                }
+                              ]
+                            }
+                          ],
+                          "default": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                  "climate.hvac_office_hvac_office"
+                                ]
+                              }
+                            },
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "heat"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen"
+                                ]
+                              }
+                            },
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_heat_sleep') | float }}"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen"
+                                ]
+                              }
+                            },
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_heat_temp_low_oil') | float }}"},
+                              "target": {"entity_id": "climate.dining_room_dining_room_thermostat"}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": ["Cool"]
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "or",
+                              "conditions": [
+                                {"after": "07:00:00", "before": "23:30:00", "condition": "time", "weekday": ["mon", "tue", "wed", "thu", "fri"]},
+                                {"after": "07:30:00", "before": "23:30:00", "condition": "time", "weekday": ["sat", "sun"]}
+                              ]
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "cool"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_master_bedroom_hvac_master_bedroom",
+                                  "climate.hvac_office_hvac_office"
+                                ]
+                              }
+                            },
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_awake') | float }}"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_kitchen_hvac_kitchen"
+                                ]
+                              }
+                            },
+                            {
+                              "choose": [
+                                {
+                                  "conditions": [
+                                    {
+                                      "condition": "state",
+                                      "entity_id": "input_boolean.master_bedroom_ac",
+                                      "state": "on"
+                                    }
+                                  ],
+                                  "sequence": [
+                                    {
+                                      "action": "climate.set_temperature",
+                                      "data": {"temperature": "{{ states('input_number.setpoint_cool_mbr_override') | float }}"},
+                                      "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                                    }
+                                  ]
+                                }
+                              ],
+                              "default": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_upstairs_default') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                                }
+                              ]
+                            },
+                            {
+                              "choose": [
+                                {
+                                  "conditions": [
+                                    {
+                                      "condition": "state",
+                                      "entity_id": "input_boolean.office_ac",
+                                      "state": "on"
+                                    }
+                                  ],
+                                  "sequence": [
+                                    {
+                                      "action": "climate.set_temperature",
+                                      "data": {"temperature": "{{ states('input_number.setpoint_cool_office_override') | float }}"},
+                                      "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                                    }
+                                  ]
+                                },
+                                {
+                                  "conditions": [
+                                    {
+                                      "condition": "state",
+                                      "entity_id": "schedule.office_work",
+                                      "state": "on"
+                                    }
+                                  ],
+                                  "sequence": [
+                                    {
+                                      "action": "climate.set_temperature",
+                                      "data": {"temperature": "{{ states('input_number.setpoint_cool_office_work') | float }}"},
+                                      "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                                    }
+                                  ]
+                                }
+                              ],
+                              "default": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_upstairs_default') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                                }
+                              ]
+                            },
+                            {
+                              "choose": [
+                                {
+                                  "conditions": [
+                                    {
+                                      "condition": "state",
+                                      "entity_id": "schedule.game_room_cool",
+                                      "state": "on"
+                                    }
+                                  ],
+                                  "sequence": [
+                                    {
+                                      "action": "climate.set_temperature",
+                                      "data": {"temperature": "{{ states('input_number.setpoint_cool_game_room') | float }}"},
+                                      "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                                    }
+                                  ]
+                                }
+                              ],
+                              "default": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_awake') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_temperature",
+                          "data": {"temperature": "{{ states('input_number.setpoint_cool_sleep') | float }}"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_dining_room_hvac_dining_room",
+                              "climate.hvac_kitchen_hvac_kitchen"
+                            ]
+                          }
+                        },
+                        {
+                          "choose": [
+                            {
+                              "conditions": [
+                                {
+                                  "condition": "state",
+                                  "entity_id": "input_boolean.office_ac",
+                                  "state": "on"
+                                }
+                              ],
+                              "sequence": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_office_override') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                                }
+                              ]
+                            }
+                          ],
+                          "default": [
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_sleep') | float }}"},
+                              "target": {"entity_id": "climate.hvac_office_hvac_office"}
+                            }
+                          ]
+                        },
+                        {
+                          "choose": [
+                            {
+                              "conditions": [
+                                {
+                                  "condition": "state",
+                                  "entity_id": "input_boolean.master_bedroom_ac",
+                                  "state": "on"
+                                }
+                              ],
+                              "sequence": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_mbr_override') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                                }
+                              ]
+                            }
+                          ],
+                          "default": [
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_sleep_mbr') | float }}"},
+                              "target": {"entity_id": "climate.hvac_master_bedroom_hvac_master_bedroom"}
+                            }
+                          ]
+                        },
+                        {
+                          "choose": [
+                            {
+                              "conditions": [
+                                {
+                                  "condition": "state",
+                                  "entity_id": "schedule.game_room_cool",
+                                  "state": "on"
+                                }
+                              ],
+                              "sequence": [
+                                {
+                                  "action": "climate.set_temperature",
+                                  "data": {"temperature": "{{ states('input_number.setpoint_cool_game_room') | float }}"},
+                                  "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                                }
+                              ]
+                            }
+                          ],
+                          "default": [
+                            {
+                              "action": "climate.set_temperature",
+                              "data": {"temperature": "{{ states('input_number.setpoint_cool_sleep') | float }}"},
+                              "target": {"entity_id": "climate.hvac_game_room_hvac_game_room"}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "conditions": [
+                    {
+                      "condition": "state",
+                      "entity_id": "input_select.hvac_season",
+                      "state": ["Off"]
+                    }
+                  ],
+                  "sequence": [
+                    {
+                      "choose": [
+                        {
+                          "conditions": [
+                            {
+                              "condition": "and",
+                              "conditions": [
+                                {"condition": "state", "entity_id": "input_boolean.office_ac", "state": "on"},
+                                {"condition": "state", "entity_id": "input_boolean.master_bedroom_ac", "state": "on"}
+                              ]
+                            }
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "conditions": [
+                            {"condition": "state", "entity_id": "input_boolean.office_ac", "state": "on"}
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_master_bedroom_hvac_master_bedroom"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "conditions": [
+                            {"condition": "state", "entity_id": "input_boolean.master_bedroom_ac", "state": "on"}
+                          ],
+                          "sequence": [
+                            {
+                              "action": "climate.set_hvac_mode",
+                              "data": {"hvac_mode": "off"},
+                              "target": {
+                                "entity_id": [
+                                  "climate.hvac_dining_room_hvac_dining_room",
+                                  "climate.hvac_game_room_hvac_game_room",
+                                  "climate.hvac_kitchen_hvac_kitchen",
+                                  "climate.hvac_office_hvac_office"
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "default": [
+                        {
+                          "action": "climate.set_hvac_mode",
+                          "data": {"hvac_mode": "off"},
+                          "target": {
+                            "entity_id": [
+                              "climate.hvac_dining_room_hvac_dining_room",
+                              "climate.hvac_game_room_hvac_game_room",
+                              "climate.hvac_kitchen_hvac_kitchen",
+                              "climate.hvac_master_bedroom_hvac_master_bedroom",
+                              "climate.hvac_office_hvac_office"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "initial_state": true,
+  "mode": "restart"
+}

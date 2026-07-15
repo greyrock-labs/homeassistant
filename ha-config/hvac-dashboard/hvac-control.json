@@ -1,0 +1,168 @@
+{
+  "views": [
+    {
+      "icon": "mdi:home-thermometer",
+      "path": "overview",
+      "sections": [
+        {
+          "cards": [
+            {"type": "heading", "heading": "Season"},
+            {"type": "tile", "entity": "input_select.hvac_season", "name": "Season Mode", "vertical": false, "features": [{"type": "select-options"}], "features_position": "bottom", "icon": "mdi:calendar-season"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "AC Overrides"},
+            {"entity": "input_boolean.office_ac", "icon": "mdi:air-conditioner", "name": "Office AC Override", "type": "tile"},
+            {"entity": "input_boolean.master_bedroom_ac", "icon": "mdi:air-conditioner", "name": "Master Bedroom AC Override", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "System Status"},
+            {"entity": "input_boolean.use_oil_heat", "icon": "mdi:fire", "name": "Oil Heat", "type": "tile"},
+            {"color": "red", "entity": "input_boolean.grid_no_power", "icon": "mdi:transmission-tower-off", "name": "Grid No Power", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Schedules"},
+            {"entity": "schedule.office_work", "name": "Office Work Schedule", "icon": "mdi:calendar-clock", "type": "tile"},
+            {"entity": "schedule.game_room_cool", "name": "Game Room Cool Schedule", "icon": "mdi:gamepad-variant", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Presence"},
+            {"entity": "person.todd_punderson", "icon": "mdi:account", "type": "tile"},
+            {"entity": "person.andy_bates", "icon": "mdi:account", "type": "tile"},
+            {"entity": "input_boolean.any_home", "icon": "mdi:home-account", "name": "Anyone Home", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Mini-Splits"},
+            {"entity": "climate.hvac_dining_room_hvac_dining_room", "features": [{"hvac_modes": ["heat", "cool", "off"], "type": "climate-hvac-modes"}, {"type": "target-temperature"}], "name": "Dining Room", "type": "tile"},
+            {"entity": "climate.hvac_game_room_hvac_game_room", "features": [{"hvac_modes": ["heat", "cool", "off"], "type": "climate-hvac-modes"}, {"type": "target-temperature"}], "name": "Game Room", "type": "tile"},
+            {"entity": "climate.hvac_kitchen_hvac_kitchen", "features": [{"hvac_modes": ["heat", "cool", "off"], "type": "climate-hvac-modes"}, {"type": "target-temperature"}], "name": "Kitchen", "type": "tile"},
+            {"entity": "climate.hvac_master_bedroom_hvac_master_bedroom", "features": [{"hvac_modes": ["heat", "cool", "off"], "type": "climate-hvac-modes"}, {"type": "target-temperature"}], "name": "Master Bedroom", "type": "tile"},
+            {"entity": "climate.hvac_office_hvac_office", "features": [{"hvac_modes": ["heat", "cool", "off"], "type": "climate-hvac-modes"}, {"type": "target-temperature"}], "name": "Office", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Quick Actions"},
+            {"icon": "mdi:play-circle", "name": "Apply Settings Now", "tap_action": {"action": "perform-action", "perform_action": "automation.trigger", "target": {"entity_id": "automation.hvac_apply_mode"}}, "type": "button"}
+          ]
+        }
+      ],
+      "title": "Overview",
+      "type": "sections"
+    },
+    {
+      "icon": "mdi:thermometer-lines",
+      "path": "setpoints",
+      "sections": [
+        {
+          "cards": [
+            {"type": "heading", "heading": "Heat — Awake"},
+            {"entity": "input_number.setpoint_heat_awake", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:thermometer", "name": "Dining Room", "type": "tile"},
+            {"entity": "input_number.setpoint_heat_kitchen", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:thermometer", "name": "Kitchen", "type": "tile"},
+            {"entity": "input_number.setpoint_heat_game_room", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:thermometer", "name": "Game Room", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Heat — Asleep & Away"},
+            {"entity": "input_number.setpoint_heat_sleep", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:weather-night", "name": "Asleep", "type": "tile"},
+            {"entity": "input_number.setpoint_heat_away", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:home-export-outline", "name": "Away", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Heat — Oil Furnace"},
+            {"entity": "input_number.setpoint_heat_temp_low_oil", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:thermometer-low", "name": "Dormant (splits heating)", "type": "tile"},
+            {"entity": "input_number.setpoint_heat_oil_sleep", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:fire", "name": "Oil Heat — Asleep", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Cool — Defaults"},
+            {"entity": "input_number.setpoint_cool_awake", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:snowflake", "name": "Awake", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_away", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:home-export-outline", "name": "Away", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_upstairs_default", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:home-thermometer", "name": "Upstairs Default", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_sleep", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:weather-night", "name": "Asleep (all zones)", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_sleep_mbr", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:bed", "name": "Asleep — Master Bedroom", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Cool — Overrides"},
+            {"entity": "input_number.setpoint_cool_mbr_override", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:bed", "name": "MBR Override", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_office_override", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:briefcase", "name": "Office Override", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_office_work", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:briefcase", "name": "Office Work Window", "type": "tile"},
+            {"entity": "input_number.setpoint_cool_game_room", "features": [{"mode": "slider", "type": "numeric-input"}], "icon": "mdi:gamepad-variant", "name": "Game Room Cool", "type": "tile"}
+          ]
+        }
+      ],
+      "title": "Setpoints",
+      "type": "sections"
+    },
+    {
+      "icon": "mdi:robot",
+      "path": "automations",
+      "sections": [
+        {
+          "cards": [
+            {"type": "heading", "heading": "HVAC Core"},
+            {"entity": "automation.hvac_apply_mode", "name": "Apply Mode", "type": "tile"},
+            {"entity": "automation.hvac_schedule_awake", "name": "Schedule: Awake", "type": "tile"},
+            {"entity": "automation.hvac_schedule_asleep_heat", "name": "Schedule: Asleep (Heat)", "type": "tile"},
+            {"entity": "automation.hvac_schedule_asleep_cool", "name": "Schedule: Asleep (Cool)", "type": "tile"},
+            {"entity": "automation.hvac_mbr_pre_cool", "name": "MBR Pre-cool", "type": "tile"},
+            {"entity": "automation.hvac_presence_any_home", "name": "Presence: any_home", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Schedule Re-apply"},
+            {"entity": "automation.hvac_office_work_schedule_re_apply_mode", "name": "Office Work Schedule: Re-apply Mode", "type": "tile"},
+            {"entity": "automation.hvac_apply_mode_re_apply_on_game_room_schedule", "name": "Game Room Schedule: Re-apply Mode", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Office AC"},
+            {"entity": "automation.hvac_office_ac_on", "name": "Office AC: On", "type": "tile"},
+            {"entity": "automation.hvac_office_ac_off", "name": "Office AC: Off", "type": "tile"},
+            {"entity": "automation.hvac_office_ac_auto_off_at_7pm", "name": "Office AC: Auto-Off at 7pm", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Master Bedroom AC"},
+            {"entity": "automation.hvac_master_bedroom_ac_on", "name": "MBR AC: On", "type": "tile"},
+            {"entity": "automation.hvac_master_bedroom_ac_off", "name": "MBR AC: Off", "type": "tile"},
+            {"entity": "automation.hvac_master_bedroom_ac_auto_off_at_10am", "name": "MBR AC: Auto-Off at 10am", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Grid Power"},
+            {"entity": "automation.grid_power_lost", "name": "Grid Power Lost", "type": "tile"},
+            {"entity": "automation.grid_power_restored", "name": "Grid Power Restored", "type": "tile"},
+            {"entity": "sensor.input_0", "icon": "mdi:transmission-tower", "name": "Grid Voltage", "type": "tile"}
+          ]
+        },
+        {
+          "cards": [
+            {"type": "heading", "heading": "Heat/Cool Mutex"},
+            {"entity": "automation.hvac_ac_overrides_auto_off_on_heat_season", "name": "Auto-Off on Heat Season", "type": "tile"}
+          ]
+        }
+      ],
+      "title": "Automations",
+      "type": "sections"
+    }
+  ]
+}
