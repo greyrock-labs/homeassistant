@@ -23,6 +23,21 @@ is now heat-only for HVAC purposes.** It is still referenced as the target of
 physical heat setpoint. It is no longer the season signal. Do not "clean up"
 those setpoint writes thinking they're stale.
 
+### Season persistence: `input_text.hvac_season_persisted`
+
+A shadow text helper that mirrors `input_select.hvac_season` on every state
+change (written by `automation.hvac_persist_season`). Used by
+`automation.hvac_restore_season_after_restart` after HA reboots to restore
+the user's chosen season (the `input_select` itself reverts to its default
+`Off` value on HA restart). Together they form the season persistence flow:
+
+- **`automation.hvac_persist_season`** — mirrors `input_select.hvac_season`
+  into `input_text.hvac_season_persisted` on every change
+  (`not_from: [unavailable, unknown]` guard).
+- **`automation.hvac_restore_season_after_restart`** — fires on HA `start`,
+  reads `input_text.hvac_season_persisted`, and restores the actual
+  `input_select.hvac_season` if the persisted value is Heat or Cool.
+
 ### The engine: `automation.hvac_apply_mode`
 
 The core logic, designed as a "commit" body with **no triggers of its own**.
@@ -58,7 +73,7 @@ directly through its own triggers.
 
 ### Apply Mode entry points
 
-Apply Mode has 10 entry points, all of which call
+Apply Mode has 11 entry points, all of which call
 `automation.trigger` on `automation.hvac_apply_mode` with
 `skip_condition: true`. This keeps the engine as a pure "commit" body
 and makes every code path that runs it explicit and traceable.
@@ -77,12 +92,38 @@ and makes every code path that runs it explicit and traceable.
 | `hvac_ac_overrides_auto_off_on_heat_season`                 | season flips to Heat (also turns off overrides first)  |
 | Dashboard "Apply Settings Now" button                        | User tap                                               |
 
+> **Known issue (2026-07-15):** the `schedule.game_room_cool` re-apply
+> automation is missing the `not_from: [unavailable, unknown]` and
+> `not_to: [unavailable, unknown]` state filters that
+> `schedule.office_work` has. The omission is a tool-wrapper limitation
+> (nested-array XML serialization error), not a design choice. HA startup
+> state transitions on this automation may briefly re-apply Apply Mode
+> spuriously. Match the office pattern if the wrapper limitation is fixed.
+
 ### Schedule triggers
 
 - `hvac_schedule_awake` — 07:00 weekday / 07:30 weekend → apply awake setpoints
 - `hvac_schedule_asleep_heat` — 23:00, only if season=Heat → apply heat sleep setpoints
 - `hvac_schedule_asleep_cool` — 23:30, only if season=Cool → apply cool sleep setpoints
 - `hvac_mbr_pre_cool` — 22:00, only if season=Cool and anyone home → drop master bedroom to its sleep setpoint 90 minutes early
+
+### Presence: `automation.hvac_presence_any_home`
+
+Maintains `input_boolean.any_home`, which Apply Mode and several other
+automations branch on. Two triggers with IDs:
+
+- `arrived` — fires on either `person.todd_punderson` or `person.andy_bates`
+  going to `home`. Action: turn `input_boolean.any_home` on immediately.
+- `departed` — fires on either person going to `not_home`. Waits 2 hours
+  (`wait_for_trigger` for either person returning); if at the end of the
+  timeout both are still `not_home`, turn `input_boolean.any_home` off.
+
+The 2-hour debounce means a quick errand doesn't flip the house to "away"
+mode (which would trigger Apply Mode to apply the `cool_away` setpoint).
+Once `any_home` is on, the next arrival does nothing (already on).
+Once `any_home` is off, only the 2-hour check or a new arrival flips it
+back. `mode: restart` means a fresh departure during an in-progress
+debounce resets the 2-hour timer.
 
 ### Office AC override
 
@@ -100,6 +141,14 @@ the room returns to following Apply Mode's schedule.
   HVAC if season is Off, or restore the appropriate Cool-season setpoint
   (away/awake/sleep) if season is Cool. Heat season is a no-op (the
   override was never active).
+  - **Restore details:** the Cool-season restore writes `cool_away` /
+    `cool_awake` / `cool_sleep` directly — it does **not** route through
+    Apply Mode's office-choose block. So if `office_ac` is toggled off
+    mid-work-window (e.g. 14:00 on a Monday), the office drops to
+    `cool_awake` (74) immediately, not `setpoint_cool_office_work` (72).
+    The work-schedule setpoint is only restored on the next Apply Mode
+    re-apply (presence change, schedule tick, etc.). Brief lag, same
+    shape as the override behavior pre-2026-07-14.
 - `hvac_office_ac_auto_off_at_7pm` — daily 19:00 reset of `office_ac`
   (skips if already off). Cascades into `hvac_office_ac_off` for the
   season-aware setpoint restore.
@@ -406,6 +455,16 @@ and flag the gap instead.
 
 ## History
 
+- **2026-07-15 (part 4)** — Doc audit fixes. Added missing automation
+  descriptions for `hvac_presence_any_home` (any_home maintainer with
+  2-hour departure debounce) and `hvac_persist_season` (shadow writer
+  for season restore). Added Season signal section note about
+  `input_text.hvac_season_persisted`. Fixed "Apply Mode has 10 entry
+  points" → 11 (table has 11 rows). Clarified `hvac_office_ac_off`
+  Cool-season restore writes default schedule setpoints directly
+  rather than routing through Apply Mode's office-choose block. Added
+  known-issue note about `schedule.game_room_cool` re-apply missing
+  `not_from`/`not_to` filters (tool-wrapper limitation, not design).
 - **2026-07-15 (part 3)** — Added `schedule.game_room_cool` and
   `setpoint_cool_game_room`. `hvac_apply_mode` Cool-season setpoint
   writes split the game room out of the main-floor group so the schedule
